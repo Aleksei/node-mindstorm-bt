@@ -1,5 +1,8 @@
 {
-  "author": "David Askirk Fotel <davsebamse@gmail.com>",
+  "author": {
+    "name": "David Askirk Fotel",
+    "email": "davsebamse@gmail.com"
+  },
   "coathor": "Alexey Vedyakov <vedyakov@gmail.com>",
   "name": "mindstorms_bluetooth",
   "description": "A nodejs module for communicating with the Lego NXT Mindstorms brick using the direct commands over bluetooth.",
@@ -13,7 +16,15 @@
     "node": ">=0.6.2"
   },
   "dependencies": {
-	"serialport": ">=0.6.3"
+    "serialport": ">=0.6.3"
   },
-  "devDependencies": {}
+  "devDependencies": {},
+  "readme": "# Mindstorms BlueTooth\n\nMindstorms bluetooth is a nodejs module to communicate with your mindstorm brick using the direct api over bluetooth.\n\n## How to install:\n\n\tnpm install mindstorms_bluetooth\n\t\n## How to use:\n\nFirst setup your Lego Mindstoms NXT brick. It will create a serial port, get that name. On Mac OS X is it on the form: /dev/tty.NXT-DevB, or at least on my mac is it so.\n\nRequire it, initialize and use.\n\n```js\nvar Nxt = require('mindstorms_bluetooth');\n\nvar nxt = new Nxt(\"/dev/tty.NXT-DevB\");\nnxt.play_tone(440, 1000);\n```\n\n# API:\n\nPlease see the nxt.js for now. I will create a better api documentation soon.\n\n# Bigger example\n\nTODO",
+  "readmeFilename": "README",
+  "_id": "mindstorms_bluetooth@0.0.2",
+  "dist": {
+    "shasum": "15997c83a317388e7b520b6a1b8ee1b3b4166e80"
+  },
+  "_resolved": "git://github.com/Aleksei/node-mindstorm-bt.git#14622a6aa82aeb4af7bea8a259b4f3ba2a8d9f8c",
+  "_from": "mindstorms_bluetooth@git://github.com/Aleksei/node-mindstorm-bt.git"
 }

@@ -9,73 +9,90 @@ var SerialPort = serialport.SerialPort;
 // - Input checking
 // - proper close after use, maybe something with detect if command have been run, only exit when no commands need to be answered.
 
-var Nxt = function (port) {
-	this.initialized = false;
-	this.debug = false;
+var Nxt = function (port, callback) {
+	var self = this;
 
-	this.sp = new SerialPort(port, {
+	self.initialized = false;
+	self.debug = false;
+
+	self.sp = new SerialPort(port, {
 		parser: serialport.parsers.raw
+	}, false);
+
+	self.sp.open(function () {
+
+		self.sp.data_handles = {};
+		self.initialized = true;
+
+		self.sp.on('data', self.status_handle);
+
+		self.sp.nxt_error_messages = self.nxt_error_messages;
+		self.sp.nxt_commands = self.nxt_commands;
+
+		//Output ports
+		self.MOTOR_A = 0x00;
+		self.MOTOR_B = 0x01;
+		self.MOTOR_C = 0x02;
+		self.MOTOR_ALL = 0xff;
+
+		self.speed = {};
+		self.speed[ self.MOTOR_A ] = 0;
+		self.speed[ self.MOTOR_B ] = 0;
+		self.speed[ self.MOTOR_C ] = 0;
+
+		//Output modes
+		self.MOTORON = 0x01;
+		self.BRAKE = 0x02;
+		self.REGULATED = 0x04;
+
+		//Regulations mode
+		self.REGULATION_MODE_IDLE = 0x00;
+		self.REGULATION_MODE_MOTOR_SPEED = 0x01;
+		self.REGULATION_MODE_MOTOR_SYNC = 0x02;
+
+		//Runstate
+		self.MOTOR_RUN_STATE_IDLE = 0x00;
+		self.MOTOR_RUN_STATE_RAMPUP = 0x10;
+		self.MOTOR_RUN_STATE_RUNNING = 0x20;
+		self.MOTOR_RUN_STATE_RAMPDOWN = 0x40;
+
+		//Input ports
+		self.INPUT_PORT_1 = 0x00;
+		self.INPUT_PORT_2 = 0x01;
+		self.INPUT_PORT_3 = 0x02;
+		self.INPUT_PORT_4 = 0x03;
+
+		//Sensor types
+		self.NO_SENSOR = 0x00;
+		self.SWITCH = 0x01;
+		self.TEMPERATURE = 0x02;
+		self.REFLECTION = 0x03;
+		self.ANGLE = 0x04;
+		self.LIGHT_ACTIVE = 0x05;
+		self.LIGHT_INACTIVE = 0x06;
+		self.SOUND_DB = 0x07;
+		self.SOUND_DBA = 0x08;
+		self.CUSTOM = 0x09;
+		self.LOWSPEED = 0x0a;
+		self.LOWSPEED_9V = 0x0b;
+		self.NO_OF_SENSOR_TYPES = 0x0c;
+
+		//Sensor modes
+		self.RAWMODE = 0x00;
+		self.BOOLEANMODE = 0x20;
+		self.TRANSITIONCNTMODE = 0x40;
+		self.PERIODCOUNTERMODE = 0x60;
+		self.PCTFULLSCALEMODE = 0x80;
+		self.CELSIUSMODE = 0xa0;
+		self.FAHRENHEITMODE = 0xc0;
+		self.ANGLESTEPSMODE = 0xe0;
+		self.SLOPEMASK = 0x1f;
+		self.MODEMASK = 0xe0;
+
+		if ( typeof callback === 'function' ) {
+			callback();
+		}
 	});
-	this.sp.data_handles = {};
-	this.initialized = true;
-	this.sp.on('data', this.status_handle);
-	this.sp.nxt_error_messages = this.nxt_error_messages;
-	this.sp.nxt_commands = this.nxt_commands;
-
-	//Output ports
-	this.MOTOR_A = 0x00;
-	this.MOTOR_B = 0x01;
-	this.MOTOR_C = 0x02;
-	this.MOTOR_ALL = 0xff;
-	
-	//Output modes
-	this.MOTORON = 0x01;
-	this.BRAKE = 0x02;
-	this.REGULATED = 0x04;
-
-	//Regulations mode
-	this.REGULATION_MODE_IDLE = 0x00;
-	this.REGULATION_MODE_MOTOR_SPEED = 0x01;
-	this.REGULATION_MODE_MOTOR_SYNC = 0x02;
-
-	//Runstate
-	this.MOTOR_RUN_STATE_IDLE = 0x00;
-	this.MOTOR_RUN_STATE_RAMPUP = 0x10;
-	this.MOTOR_RUN_STATE_RUNNING = 0x20;
-	this.MOTOR_RUN_STATE_RAMPDOWN = 0x40;
-
-	//Input ports
-	this.INPUT_PORT_1 = 0x00;
-	this.INPUT_PORT_2 = 0x01;
-	this.INPUT_PORT_3 = 0x02;
-	this.INPUT_PORT_4 = 0x03;
-
-	//Sensor types
-	this.NO_SENSOR = 0x00;
-	this.SWITCH = 0x01;
-	this.TEMPERATURE = 0x02;
-	this.REFLECTION = 0x03;
-	this.ANGLE = 0x04;
-	this.LIGHT_ACTIVE = 0x05;
-	this.LIGHT_INACTIVE = 0x06;
-	this.SOUND_DB = 0x07;
-	this.SOUND_DBA = 0x08;
-	this.CUSTOM = 0x09;
-	this.LOWSPEED = 0x0a;
-	this.LOWSPEED_9V = 0x0b;
-	this.NO_OF_SENSOR_TYPES = 0x0c;
-
-	//Sensor modes
-	this.RAWMODE = 0x00;
-	this.BOOLEANMODE = 0x20;
-	this.TRANSITIONCNTMODE = 0x40;
-	this.PERIODCOUNTERMODE = 0x60;
-	this.PCTFULLSCALEMODE = 0x80;
-	this.CELSIUSMODE = 0xa0;
-	this.FAHRENHEITMODE = 0xc0;
-	this.ANGLESTEPSMODE = 0xe0;
-	this.SLOPEMASK = 0x1f;
-	this.MODEMASK = 0xe0;
 };
 
 Nxt.prototype.nxt_error_messages = {
@@ -137,19 +154,27 @@ Nxt.prototype.stop_program = function () {
 	this.execute_command(command);
 };
 
+Nxt.prototype.motor_set_speed = function (motor, speed) {
+	this.set_output_state(motor, speed, this.MOTORON + this.BRAKE + this.REGULATED, this.REGULATION_MODE_MOTOR_SPEED, 0, this.MOTOR_RUN_STATE_RUNNING, 0);
+};
+
+Nxt.prototype.motor_stop = function (motor) {
+	this.set_output_state( motor, 0, 0, 0, 0, 0, 0 );
+};
+
 Nxt.prototype.play_tone = function (freq, dur) {
 	var command = new Buffer([0x00, 0x03, freq & 0xff, (freq >> 8) & 0xff, dur & 0x00ff, (dur >> 8) & 0xff]);
 	this.execute_command(command);
 };
 
-Nxt.prototype.set_output_state = function (port, power, mode, reg_mode, turn_ratio, run_state, tacho_limit) {
+Nxt.prototype.set_output_state = function (port, speed, mode, reg_mode, turn_ratio, run_state, tacho_limit) {
 	var tacho = [];
 	tacho[0] = tacho_limit & 0xff;
 	tacho[1] = (tacho_limit >> 8) & 0xff;
 	tacho[2] = (tacho_limit >> 16) & 0xff;
 	tacho[3] = (tacho_limit >> 24) & 0xff;
 	// The speed is set between -100 and 100
-	var speed = power+100;
+	// var speed = power+100;
 /*	if (power < 0) {
 		speed = 255-power;
 	}*/
@@ -212,7 +237,7 @@ Nxt.prototype.keep_alive = function () {
 Nxt.prototype.ls_get_status = function (port) {
 	var command = new Buffer([0x00, 0x0e, port]);
 	this.execute_command(command);
-}
+};
 
 //tx_data needs to be an array
 Nxt.prototype.ls_write = function (port, rx_read_length, tx_data) {
@@ -249,7 +274,10 @@ Nxt.prototype.execute_command = function (command, callback) {
 	if (this.initialized !== true) {
 		console.log("NXT not initialized!!!");
 	}
-	this.sp.write(real_command);
+	this.sp.write(real_command, function(err, results) {
+		// console.log('err ' + err);
+		// console.log('results ' + results);
+	});
 };
 
 Nxt.prototype.status_handle = function (data) {
@@ -291,7 +319,9 @@ Nxt.prototype.close_connection = function (sp) {
 	if (this.debug) {
 		console.log("Closing serialport connection");
 	}
-	this.sp.end(false, null);
+	this.sp.close(function(){
+		console.log( arguments );
+	});
 };
 
 module.exports.Nxt = Nxt;
