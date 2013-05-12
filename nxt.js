@@ -15,6 +15,12 @@ var Nxt = function (port, callback) {
 	self.initialized = false;
 	self.debug = false;
 
+	process.on('uncaughtException', function (exception) {
+		if ( typeof callback === 'function' ) {
+			callback( exception );
+		}
+	});
+
 	self.sp = new SerialPort(port, {
 		parser: serialport.parsers.raw
 	}, false);
