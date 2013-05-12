@@ -6,7 +6,7 @@
   "coathor": "Alexey Vedyakov <vedyakov@gmail.com>",
   "name": "mindstorms_bluetooth",
   "description": "A nodejs module for communicating with the Lego NXT Mindstorms brick using the direct commands over bluetooth.",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "repository": {
     "type": "git",
     "url": "git://github.com/Aleksei/node-mindstorm-bt.git"
